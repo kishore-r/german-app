@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deutsch 3000 Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .noun { border-left: 8px solid #3b82f6; } 
+        .verb { border-left: 8px solid #22c55e; } 
+        .adj { border-left: 8px solid #eab308; }  
+        .adv { border-left: 8px solid #a855f7; }  
+        .hidden-sentence { display: none; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .modal-open { overflow: hidden; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans pb-10">
+
+    <div class="max-w-md mx-auto p-4">
+        <!-- Header -->
+        <header class="mb-4 pt-4">
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl font-black text-slate-800 tracking-tighter">DEUTSCH <span class="text-blue-600">3000</span></h1>
+                <div class="flex items-center gap-2 bg-white px-3 py-1 rounded-xl shadow-sm border">
+                    <span class="text-[10px] font-bold text-slate-400">GO TO:</span>
+                    <input type="number" id="jump-input" placeholder="1" class="w-10 text-center font-bold text-blue-600 focus:outline-none">
+                    <button onclick="jumpToWord()" class="text-blue-600 font-bold text-xs pr-2 hover:scale-110 transition">GO</button>
+                </div>
+            </div>
+            
+            <div class="w-full bg-slate-200 rounded-full h-2 mt-4">
+                <div id="progress-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+            <div class="flex justify-between text-[10px] mt-2 font-bold text-slate-400 uppercase tracking-widest">
+                <span id="stats-current">Word 1 of 100</span>
+                <span id="stats-learned">Learned: 0</span>
+            </div>
+        </header>
+
+        <!-- Main Card -->
+        <div id="main-card" class="bg-white rounded-3xl shadow-xl p-6 mb-4 min-h-[380px] flex flex-col justify-between border border-slate-100">
+            <div>
+                <div class="flex justify-between items-center mb-4">
+                    <span id="type-tag" class="text-[10px] font-bold px-3 py-1 rounded-full uppercase">Type</span>
+                    <span id="learned-badge" class="hidden text-[10px] font-bold px-3 py-1 rounded-full bg-green-100 text-green-600 uppercase">✓ Mastered</span>
+                </div>
+                
+                <h2 id="de-word" class="text-4xl font-bold text-slate-800">Laden...</h2>
+                <p id="en-word" class="text-xl text-slate-400 mt-1 italic">Loading...</p>
+
+                <div id="sentence-box" class="mt-8 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                    <button onclick="toggleSentence()" id="sent-btn" class="text-[10px] font-bold text-blue-500 uppercase tracking-widest w-full text-left flex justify-between">
+                        Example Sentence <span>↓</span>
+                    </button>
+                    <div id="sentence-content" class="hidden-sentence mt-3">
+                        <p id="de-sent" class="text-slate-700 font-medium leading-tight"></p>
+                        <p id="en-sent" class="text-slate-400 text-sm italic mt-2"></p>
+                    </div>
+                </div>
+            </div>
+            
+            <button onclick="toggleLearned()" id="learn-btn" class="w-full mt-6 py-4 rounded-2xl font-bold text-white bg-green-500 hover:bg-green-600 shadow-lg transition-all active:scale-95">
+                MARK AS LEARNED
+            </button>
+        </div>
+
+        <!-- Controls -->
+        <div class="grid grid-cols-2 gap-3">
+            <button onclick="prevWord()" class="bg-white border border-slate-200 text-slate-600 py-4 rounded-2xl font-bold active:bg-slate-100 transition">← BACK</button>
+            <button onclick="nextWord()" class="bg-slate-800 text-white py-4 rounded-2xl font-bold shadow-lg active:bg-black transition">NEXT →</button>
+        </div>
+
+        <!-- Footer Menu -->
+        <div class="flex flex-wrap justify-center mt-8 gap-4">
+            <button onclick="showLearnedList()" class="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest border border-blue-100">📋 My Progress</button>
+            <button onclick="shuffleWords()" class="text-slate-400 text-[10px] font-bold uppercase tracking-widest hover:text-blue-500">🔀 Shuffle</button>
+            <button onclick="resetData()" class="text-slate-400 text-[10px] font-bold uppercase tracking-widest hover:text-red-500">🗑️ Reset</button>
+        </div>
+    </div>
+
+    <!-- Learned Words Modal -->
+    <div id="list-modal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 p-6">
+        <div class="bg-white w-full max-w-md mx-auto rounded-3xl h-[80vh] flex flex-col p-6 shadow-2xl mt-10">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-black text-slate-800">MASTERED WORDS</h2>
+                <button onclick="closeList()" class="text-slate-400 font-bold text-xl px-2">✕</button>
+            </div>
+            <div id="learned-container" class="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                <!-- Words injected here -->
+            </div>
+            <button onclick="closeList()" class="w-full mt-4 bg-slate-800 text-white py-3 rounded-xl font-bold">CLOSE</button>
+        </div>
+    </div>
+
+    <script>
+        // DATASET: COMBINED BATCH 1 & 2 (First 100 Words)
+        let dictionary = [
+            { de: "Ich", en: "I", type: "adv", s_de: "Ich heiße Marc.", s_en: "My name is Marc." },
+            { de: "Du", en: "You (singular)", type: "adv", s_de: "Du bist mein Freund.", s_en: "You are my friend." },
+            { de: "Sein", en: "To be", type: "v", s_de: "Das kann nicht sein.", s_en: "That cannot be." },
+            { de: "Haben", en: "To have", type: "v", s_de: "Ich habe einen Hund.", s_en: "I have a dog." },
+            { de: "Der Tag", en: "The day", type: "n", s_de: "Guten Tag!", s_en: "Good day!" },
+            { de: "Die Zeit", en: "The time", type: "n", s_de: "Ich habe keine Zeit.", s_en: "I have no time." },
+            { de: "Machen", en: "To do/make", type: "v", s_de: "Was machst du heute?", s_en: "What are you doing today?" },
+            { de: "Sagen", en: "To say", type: "v", s_de: "Sag mir die Wahrheit.", s_en: "Tell me the truth." },
+            { de: "Groß", en: "Big/Tall", type: "adj", s_de: "Das Haus ist sehr groß.", s_en: "The house is very big." },
+            { de: "Gut", en: "Good", type: "adj", s_de: "Das ist eine gute Idee.", s_en: "That is a good idea." },
+            { de: "Kommen", en: "To come", type: "v", s_de: "Wann kommst du?", s_en: "When are you coming?" },
+            { de: "Gehen", en: "To go", type: "v", s_de: "Ich gehe nach Hause.", s_en: "I am going home." },
+            { de: "Wissen", en: "To know", type: "v", s_de: "Ich weiß es nicht.", s_en: "I don't know it." },
+            { de: "Neu", en: "New", type: "adj", s_de: "Mein Auto ist neu.", s_en: "My car is new." },
+            { de: "Das Jahr", en: "The year", type: "n", s_de: "Dieses Jahr ist wichtig.", s_en: "This year is important." },
+            { de: "Viel", en: "Much/A lot", type: "adj", s_de: "Ich esse viel Obst.", s_en: "I eat a lot of fruit." },
+            { de: "Hier", en: "Here", type: "adv", s_de: "Bleib bitte hier.", s_en: "Please stay here." },
+            { de: "Jetzt", en: "Now", type: "adv", s_de: "Wir müssen jetzt gehen.", s_en: "We must go now." },
+            { de: "Wollen", en: "To want", type: "v", s_de: "Was willst du trinken?", s_en: "What do you want to drink?" },
+            { de: "Geben", en: "To give", type: "v", s_de: "Gib mir das Buch.", s_en: "Give me the book." },
+            { de: "Die Welt", en: "The world", type: "n", s_de: "Die Welt ist schön.", s_en: "The world is beautiful." },
+            { de: "Sprechen", en: "To speak", type: "v", s_de: "Sprichst du Deutsch?", s_en: "Do you speak German?" },
+            { de: "Einfach", en: "Simple/Easy", type: "adj", s_de: "Deutsch ist einfach.", s_en: "German is easy." },
+            { de: "Heute", en: "Today", type: "adv", s_de: "Heute ist es warm.", s_en: "Today it is warm." },
+            { de: "Das Kind", en: "The child", type: "n", s_de: "Das Kind spielt.", s_en: "The child is playing." },
+            { de: "Das Haus", en: "The house", type: "n", s_de: "Das Haus ist alt.", s_en: "The house is old." },
+            { de: "Essen", en: "To eat", type: "v", s_de: "Was essen wir?", s_en: "What are we eating?" },
+            { de: "Trinken", en: "To drink", type: "v", s_de: "Ich trinke Wasser.", s_en: "I am drinking water." },
+            { de: "Schlafen", en: "To sleep", type: "v", s_de: "Das Kind schläft.", s_en: "The child is sleeping." },
+            { de: "Finden", en: "To find", type: "v", s_de: "Ich finde meinen Schlüssel nicht.", s_en: "I can't find my key." },
+            { de: "Bleiben", en: "To stay", type: "v", s_de: "Ich bleibe zu Hause.", s_en: "I am staying at home." },
+            { de: "Denken", en: "To think", type: "v", s_de: "Was denkst du?", s_en: "What do you think?" },
+            { de: "Hören", en: "To hear/listen", type: "v", s_de: "Ich höre Musik.", s_en: "I am listening to music." },
+            { de: "Sehen", en: "To see", type: "v", s_de: "Ich sehe dich.", s_en: "I see you." },
+            { de: "Der Mann", en: "The man", type: "n", s_de: "Der Mann ist nett.", s_en: "The man is nice." },
+            { de: "Die Frau", en: "The woman", type: "n", s_de: "Die Frau arbeitet hier.", s_en: "The woman works here." },
+            { de: "Die Arbeit", en: "The work", type: "n", s_de: "Die Arbeit macht Spaß.", s_en: "The work is fun." },
+            { de: "Das Geld", en: "The money", type: "n", s_de: "Ich habe kein Geld.", s_en: "I have no money." },
+            { de: "Das Wasser", en: "The water", type: "n", s_de: "Das Wasser ist kalt.", s_en: "The water is cold." },
+            { de: "Der Freund", en: "The friend", type: "n", s_de: "Mein Freund kommt heute.", s_en: "My friend is coming today." },
+            { de: "Der Weg", en: "The way/path", type: "n", s_de: "Der Weg ist lang.", s_en: "The way is long." },
+            { de: "Schlecht", en: "Bad", type: "adj", s_de: "Das Wetter ist schlecht.", s_en: "The weather is bad." },
+            { de: "Klein", en: "Small", type: "adj", s_de: "Die Wohnung ist klein.", s_en: "The apartment is small." },
+            { de: "Alt", en: "Old", type: "adj", s_de: "Das Brot ist alt.", s_en: "The bread is old." },
+            { de: "Schnell", en: "Fast", type: "adj", s_de: "Das Auto ist schnell.", s_en: "The car is fast." },
+            { de: "Langsam", en: "Slow", type: "adj", s_de: "Warum bist du so langsam?", s_en: "Why are you so slow?" },
+            { de: "Wenig", en: "Little/Few", type: "adj", s_de: "Ich habe wenig Zeit.", s_en: "I have little time." },
+            { de: "Schwer", en: "Heavy/Difficult", type: "adj", s_de: "Deutsch ist nicht schwer.", s_en: "German is not difficult." },
+            { de: "Kalt", en: "Cold", type: "adj", s_de: "Mir ist kalt.", s_en: "I am cold." },
+            { de: "Warm", en: "Warm", type: "adj", s_de: "Es ist heute sehr warm.", s_en: "It is very warm today." },
+            { de: "Was?", en: "What?", type: "adv", s_de: "Was ist das?", s_en: "What is that?" },
+            { de: "Wer?", en: "Who?", type: "adv", s_de: "Wer bist du?", "s_en": "Who are you?" },
+            { de: "Wo?", en: "Where?", type: "adv", s_de: "Wo wohnst du?", s_en: "Where do you live?" },
+            { de: "Wann?", en: "When?", type: "adv", s_de: "Wann geht es los?", s_en: "When does it start?" },
+            { de: "Warum?", en: "Why?", type: "adv", s_de: "Warum lachst du?", s_en: "Why are you laughing?" },
+            { de: "Wie?", en: "How?", type: "adv", s_de: "Wie geht es dir?", s_en: "How are you?" },
+            { de: "Dort", en: "There", type: "adv", s_de: "Dort steht mein Auto.", s_en: "There stands my car." },
+            { de: "Immer", en: "Always", type: "adv", s_de: "Er ist immer müde.", s_en: "He is always tired." },
+            { de: "Nie", en: "Never", type: "adv", s_de: "Ich rauche nie.", s_en: "I never smoke." },
+            { de: "Morgen", en: "Tomorrow", type: "adv", s_de: "Morgen habe ich frei.", s_en: "Tomorrow I am off." },
+            { de: "Vielleicht", en: "Maybe", type: "adv", s_de: "Vielleicht kommt sie später.", s_en: "Maybe she comes later." },
+            { de: "Sehr", en: "Very", type: "adv", s_de: "Vielen Dank, sehr nett!", s_en: "Many thanks, very nice!" },
+            { de: "Der Tisch", en: "The table", type: "n", s_de: "Das Buch liegt auf dem Tisch.", s_en: "The book is on the table." },
+            { de: "Das Auto", "en": "The car", "type": "n", s_de: "Das Auto ist blau.", s_en: "The car is blue." },
+            { de: "Leben", en: "To live", type: "v", s_de: "Ich lebe in Berlin.", s_en: "I live in Berlin." },
+            { de: "Lernen", en: "To learn", type: "v", s_de: "Ich lerne Deutsch.", s_en: "I am learning German." },
+            { de: "Kaufen", en: "To buy", type: "v", s_de: "Ich kaufe einen Apfel.", s_en: "I am buying an apple." },
+            { de: "Helfen", en: "To help", type: "v", s_de: "Kannst du mir helfen?", s_en: "Can you help me?" },
+            { de: "Warten", en: "To wait", type: "v", s_de: "Ich warte auf dich.", s_en: "I am waiting for you." },
+            { de: "Verstehen", en: "To understand", type: "v", s_de: "Ich verstehe das nicht.", s_en: "I don't understand that." },
+            { de: "Arbeiten", en: "To work", type: "v", s_de: "Wo arbeitest du?", s_en: "Where do you work?" },
+            { de: "Das Essen", en: "The food", type: "n", s_de: "Das Essen schmeckt gut.", s_en: "The food tastes good." },
+            { de: "Die Hilfe", en: "The help", type: "n", s_de: "Ich brauche Hilfe.", s_en: "I need help." },
+            { de: "Das Zimmer", en: "The room", type: "n", s_de: "Das Zimmer ist sauber.", s_en: "The room is clean." },
+            { de: "Die Schule", en: "The school", type: "n", s_de: "Die Kinder sind in der Schule.", s_en: "The children are at school." },
+            { de: "Reisen", en: "To travel", type: "v", s_de: "Ich reise gerne.", s_en: "I like to travel." },
+            { de: "Fragen", en: "To ask", type: "v", s_de: "Darf ich etwas fragen?", s_en: "May I ask something?" },
+            { de: "Antworten", en: "To answer", type: "v", s_de: "Bitte antworten Sie mir.", s_en: "Please answer me." },
+            { de: "Zahlen", en: "To pay", type: "v", s_de: "Ich möchte bitte zahlen.", s_en: "I would like to pay, please." },
+            { de: "Günstig", en: "Cheap/Affordable", type: "adj", s_de: "Das Handy war günstig.", s_en: "The phone was cheap." },
+            { de: "Teuer", en: "Expensive", type: "adj", s_de: "Das ist mir zu teuer.", s_en: "That is too expensive for me." },
+            { de: "Krank", en: "Sick", type: "adj", s_de: "Ich bin heute krank.", s_en: "I am sick today." },
+            { de: "Gesund", en: "Healthy", type: "adj", s_de: "Obst ist gesund.", s_en: "Fruit is healthy." },
+            { de: "Müde", en: "Tired", type: "adj", s_de: "Bist du müde?", s_en: "Are you tired?" },
+            { de: "Glücklich", en: "Happy", type: "adj", s_de: "Ich bin so glücklich!", s_en: "I am so happy!" },
+            { de: "Traurig", en: "Sad", type: "adj", s_de: "Warum bist du traurig?", s_en: "Why are you sad?" },
+            { de: "Ganz", en: "Quite/Whole", type: "adv", s_de: "Das ist ganz einfach.", s_en: "That is quite simple." },
+            { de: "Sicher", en: "Sure/Safe", type: "adj", s_de: "Bist du sicher?", s_en: "Are you sure?" },
+            { de: "Die Tür", en: "The door", type: "n", s_de: "Mach bitte die Tür zu.", s_en: "Please close the door." },
+            { de: "Das Fenster", en: "The window", type: "n", s_de: "Das Fenster ist offen.", s_en: "The window is open." },
+            { de: "Die Stadt", en: "The city", type: "n", s_de: "Die Stadt ist sehr alt.", s_en: "The city is very old." },
+            { de: "Das Land", en: "The country", type: "n", s_de: "Ich lebe auf dem Land.", s_en: "I live in the country." },
+            { de: "Suchen", en: "To search/look for", type: "v", s_de: "Was suchst du?", s_en: "What are you looking for?" },
+            { de: "Besuchen", en: "To visit", type: "v", s_de: "Ich besuche meine Oma.", s_en: "I am visiting my grandma." },
+            { de: "Mögen", en: "To like", type: "v", s_de: "Ich mag Schokolade.", s_en: "I like chocolate." },
+            { de: "Lieben", en: "To love", type: "v", s_de: "Ich liebe dich.", s_en: "I love you." },
+            { de: "Spielen", en: "To play", type: "v", s_de: "Wir spielen Fußball.", s_en: "We are playing soccer." },
+            { de: "Die Familie", en: "The family", type: "n", s_de: "Meine Familie ist groß.", s_en: "My family is big." },
+            { de: "Oft", en: "Often", type: "adv", s_de: "Ich gehe oft spazieren.", s_en: "I often go for a walk." }
+        ];
+
+        let currentIndex = parseInt(localStorage.getItem('g_idx')) || 0;
+        let learnedList = JSON.parse(localStorage.getItem('g_learned')) || [];
+
+        function updateUI() {
+            if (currentIndex >= dictionary.length) currentIndex = 0;
+            const word = dictionary[currentIndex];
+            const card = document.getElementById('main-card');
+            
+            document.getElementById('de-word').innerText = word.de;
+            document.getElementById('en-word').innerText = word.en;
+            document.getElementById('de-sent').innerText = word.s_de;
+            document.getElementById('en-sent').innerText = word.s_en;
+            
+            document.getElementById('sentence-content').classList.add('hidden-sentence');
+            document.getElementById('sent-btn').innerHTML = "Example Sentence <span>↓</span>";
+
+            const colors = { 
+                n: ['bg-blue-50', 'text-blue-600', 'noun', 'Noun'], 
+                v: ['bg-green-50', 'text-green-600', 'verb', 'Verb'], 
+                adj: ['bg-yellow-50', 'text-yellow-700', 'adj', 'Adjective'], 
+                adv: ['bg-purple-50', 'text-purple-600', 'adv', 'Adverb'] 
+            };
+            const c = colors[word.type];
+            card.className = "bg-white rounded-3xl shadow-xl p-6 mb-4 min-h-[380px] flex flex-col justify-between border border-slate-100 " + c[2];
+            document.getElementById('type-tag').className = `text-[10px] font-bold px-3 py-1 rounded-full uppercase ${c[0]} ${c[1]}`;
+            document.getElementById('type-tag').innerText = c[3];
+
+            const isLearned = learnedList.includes(word.de);
+            document.getElementById('learned-badge').classList.toggle('hidden', !isLearned);
+            const btn = document.getElementById('learn-btn');
+            btn.innerText = isLearned ? "UNMARK LEARNED" : "MARK AS LEARNED";
+            btn.className = isLearned ? "w-full mt-6 py-4 rounded-2xl font-bold text-slate-400 bg-slate-100" : "w-full mt-6 py-4 rounded-2xl font-bold text-white bg-green-500 shadow-lg";
+
+            document.getElementById('stats-current').innerText = `Word ${currentIndex + 1} of ${dictionary.length}`;
+            document.getElementById('stats-learned').innerText = `Learned: ${learnedList.length}`;
+            document.getElementById('progress-bar').style.width = ((currentIndex + 1) / dictionary.length * 100) + "%";
+
+            localStorage.setItem('g_idx', currentIndex);
+            localStorage.setItem('g_learned', JSON.stringify(learnedList));
+        }
+
+        function jumpToWord() {
+            const val = parseInt(document.getElementById('jump-input').value);
+            if (val > 0 && val <= dictionary.length) { currentIndex = val - 1; updateUI(); }
+        }
+
+        function toggleSentence() {
+            const content = document.getElementById('sentence-content');
+            const btn = document.getElementById('sent-btn');
+            content.classList.toggle('hidden-sentence');
+            btn.innerHTML = content.classList.contains('hidden-sentence') ? "Example Sentence <span>↓</span>" : "Hide Sentence <span>↑</span>";
+        }
+
+        function nextWord() { if (currentIndex < dictionary.length - 1) { currentIndex++; updateUI(); } }
+        function prevWord() { if (currentIndex > 0) { currentIndex--; updateUI(); } }
+        
+        function toggleLearned() {
+            const wordDe = dictionary[currentIndex].de;
+            if(!learnedList.includes(wordDe)) { 
+                learnedList.push(wordDe); 
+                setTimeout(nextWord, 400); 
+            } else { 
+                learnedList = learnedList.filter(w => w !== wordDe); 
+            }
+            updateUI();
+        }
+
+        function showLearnedList() {
+            const container = document.getElementById('learned-container');
+            container.innerHTML = "";
+            if (learnedList.length === 0) {
+                container.innerHTML = "<p class='text-slate-400 text-center mt-10 uppercase text-xs font-bold'>No words learned yet!</p>";
+            } else {
+                learnedList.forEach(word => {
+                    const div = document.createElement('div');
+                    div.className = "flex justify-between items-center p-4 bg-slate-50 rounded-2xl border border-slate-100";
+                    div.innerHTML = `<span class="font-bold text-slate-800">${word}</span> <span class="text-green-500 font-bold">✓</span>`;
+                    container.appendChild(div);
+                });
+            }
+            document.getElementById('list-modal').classList.remove('hidden');
+            document.body.classList.add('modal-open');
+        }
+
+        function closeList() {
+            document.getElementById('list-modal').classList.add('hidden');
+            document.body.classList.remove('modal-open');
+        }
+
+        function shuffleWords() {
+            if(confirm("Shuffle list? Progress is saved.")) {
+                dictionary.sort(() => Math.random() - 0.5);
+                currentIndex = 0;
+                updateUI();
+            }
+        }
+
+        function resetData() { if(confirm("Reset all?")) { localStorage.clear(); location.reload(); } }
+
+        updateUI();
+    </script>
+</body>
+</html>
