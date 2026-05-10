@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deutsch 3000 Pro</title>
+    <title>Deutsch 3000 Ultimate</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .noun { border-left: 8px solid #3b82f6; } 
@@ -13,6 +13,8 @@
         .hidden-sentence { display: none; }
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         .modal-open { overflow: hidden; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans pb-10">
@@ -21,11 +23,11 @@
         <!-- Header -->
         <header class="mb-4 pt-4">
             <div class="flex justify-between items-center">
-                <h1 class="text-2xl font-black text-slate-800 tracking-tighter">DEUTSCH <span class="text-blue-600">3000</span></h1>
-                <div class="flex items-center gap-2 bg-white px-3 py-1 rounded-xl shadow-sm border">
-                    <span class="text-[10px] font-bold text-slate-400">GO TO:</span>
-                    <input type="number" id="jump-input" placeholder="1" class="w-10 text-center font-bold text-blue-600 focus:outline-none">
-                    <button onclick="jumpToWord()" class="text-blue-600 font-bold text-xs pr-2 hover:scale-110 transition">GO</button>
+                <h1 class="text-2xl font-black text-slate-800 tracking-tighter italic">DEUTSCH <span class="text-blue-600">3000</span></h1>
+                <div class="flex items-center gap-2 bg-white px-3 py-1 rounded-xl shadow-sm border border-slate-200">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Go To:</span>
+                    <input type="number" id="jump-input" placeholder="1" class="w-10 text-center font-bold text-blue-600 focus:outline-none bg-transparent">
+                    <button onclick="jumpToWord()" class="text-blue-600 font-bold text-xs pr-1 hover:scale-110 transition">GO</button>
                 </div>
             </div>
             
@@ -39,7 +41,7 @@
         </header>
 
         <!-- Main Card -->
-        <div id="main-card" class="bg-white rounded-3xl shadow-xl p-6 mb-4 min-h-[380px] flex flex-col justify-between border border-slate-100">
+        <div id="main-card" class="bg-white rounded-3xl shadow-xl p-6 mb-4 min-h-[380px] flex flex-col justify-between border border-slate-100 transition-all duration-300">
             <div>
                 <div class="flex justify-between items-center mb-4">
                     <span id="type-tag" class="text-[10px] font-bold px-3 py-1 rounded-full uppercase">Type</span>
@@ -65,36 +67,48 @@
             </button>
         </div>
 
-        <!-- Controls -->
-        <div class="grid grid-cols-2 gap-3">
+        <!-- Navigation Controls -->
+        <div class="grid grid-cols-2 gap-3 mb-6">
             <button onclick="prevWord()" class="bg-white border border-slate-200 text-slate-600 py-4 rounded-2xl font-bold active:bg-slate-100 transition">← BACK</button>
             <button onclick="nextWord()" class="bg-slate-800 text-white py-4 rounded-2xl font-bold shadow-lg active:bg-black transition">NEXT →</button>
         </div>
 
-        <!-- Footer Menu -->
-        <div class="flex flex-wrap justify-center mt-8 gap-4">
-            <button onclick="showLearnedList()" class="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest border border-blue-100">📋 My Progress</button>
-            <button onclick="shuffleWords()" class="text-slate-400 text-[10px] font-bold uppercase tracking-widest hover:text-blue-500">🔀 Shuffle</button>
-            <button onclick="resetData()" class="text-slate-400 text-[10px] font-bold uppercase tracking-widest hover:text-red-500">🗑️ Reset</button>
+        <!-- Footer Tools -->
+        <div class="space-y-4">
+            <div class="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                <button onclick="showLearnedList()" class="text-blue-600 text-[10px] font-black uppercase tracking-widest">📋 Progress List</button>
+                <button onclick="shuffleWords()" class="text-slate-400 text-[10px] font-black uppercase tracking-widest">🔀 Shuffle</button>
+                <button onclick="resetData()" class="text-red-400 text-[10px] font-black uppercase tracking-widest">🗑️ Reset</button>
+            </div>
+
+            <!-- Backup & Restore Section -->
+            <div class="bg-slate-200/50 p-4 rounded-2xl border border-dashed border-slate-300">
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 text-center">Data Sync & Backup</p>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="backupProgress()" class="bg-white text-slate-700 border border-slate-300 py-2 rounded-xl text-[10px] font-bold hover:bg-slate-50 transition">💾 EXPORT BACKUP</button>
+                    <label class="bg-blue-600 text-white py-2 rounded-xl text-[10px] font-bold text-center cursor-pointer hover:bg-blue-700 transition">
+                        📥 IMPORT BACKUP
+                        <input type="file" id="importFile" class="hidden" accept=".json" onchange="restoreProgress(event)">
+                    </label>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Learned Words Modal -->
+    <!-- Modal for Learned Words -->
     <div id="list-modal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 p-6">
         <div class="bg-white w-full max-w-md mx-auto rounded-3xl h-[80vh] flex flex-col p-6 shadow-2xl mt-10">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-black text-slate-800">MASTERED WORDS</h2>
+                <h2 class="text-xl font-black text-slate-800">MASTERED</h2>
                 <button onclick="closeList()" class="text-slate-400 font-bold text-xl px-2">✕</button>
             </div>
-            <div id="learned-container" class="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                <!-- Words injected here -->
-            </div>
-            <button onclick="closeList()" class="w-full mt-4 bg-slate-800 text-white py-3 rounded-xl font-bold">CLOSE</button>
+            <div id="learned-container" class="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar"></div>
+            <button onclick="closeList()" class="w-full mt-4 bg-slate-800 text-white py-4 rounded-2xl font-bold">CLOSE</button>
         </div>
     </div>
 
     <script>
-        // DATASET: COMBINED BATCH 1 & 2 (First 100 Words)
+        // Use the dictionary array we built previously (ensure all 100 words are here)
         let dictionary = [
             { de: "Ich", en: "I", type: "adv", s_de: "Ich heiße Marc.", s_en: "My name is Marc." },
             { de: "Du", en: "You (singular)", type: "adv", s_de: "Du bist mein Freund.", s_en: "You are my friend." },
@@ -124,7 +138,7 @@
             { de: "Das Haus", en: "The house", type: "n", s_de: "Das Haus ist alt.", s_en: "The house is old." },
             { de: "Essen", en: "To eat", type: "v", s_de: "Was essen wir?", s_en: "What are we eating?" },
             { de: "Trinken", en: "To drink", type: "v", s_de: "Ich trinke Wasser.", s_en: "I am drinking water." },
-            { de: "Schlafen", en: "To sleep", type: "v", s_de: "Das Kind schläft.", s_en: "The child is sleeping." },
+            { de: "Schlafen", en: "To sleep", type: "v", s_de: "Das kind schläft.", s_en: "The child is sleeping." },
             { de: "Finden", en: "To find", type: "v", s_de: "Ich finde meinen Schlüssel nicht.", s_en: "I can't find my key." },
             { de: "Bleiben", en: "To stay", type: "v", s_de: "Ich bleibe zu Hause.", s_en: "I am staying at home." },
             { de: "Denken", en: "To think", type: "v", s_de: "Was denkst du?", s_en: "What do you think?" },
@@ -147,7 +161,7 @@
             { de: "Kalt", en: "Cold", type: "adj", s_de: "Mir ist kalt.", s_en: "I am cold." },
             { de: "Warm", en: "Warm", type: "adj", s_de: "Es ist heute sehr warm.", s_en: "It is very warm today." },
             { de: "Was?", en: "What?", type: "adv", s_de: "Was ist das?", s_en: "What is that?" },
-            { de: "Wer?", en: "Who?", type: "adv", s_de: "Wer bist du?", "s_en": "Who are you?" },
+            { de: "Wer?", en: "Who?", type: "adv", s_de: "Wer bist du?", s_en: "Who are you?" },
             { de: "Wo?", en: "Where?", type: "adv", s_de: "Wo wohnst du?", s_en: "Where do you live?" },
             { de: "Wann?", en: "When?", type: "adv", s_de: "Wann geht es los?", s_en: "When does it start?" },
             { de: "Warum?", en: "Why?", type: "adv", s_de: "Warum lachst du?", s_en: "Why are you laughing?" },
@@ -159,7 +173,7 @@
             { de: "Vielleicht", en: "Maybe", type: "adv", s_de: "Vielleicht kommt sie später.", s_en: "Maybe she comes later." },
             { de: "Sehr", en: "Very", type: "adv", s_de: "Vielen Dank, sehr nett!", s_en: "Many thanks, very nice!" },
             { de: "Der Tisch", en: "The table", type: "n", s_de: "Das Buch liegt auf dem Tisch.", s_en: "The book is on the table." },
-            { de: "Das Auto", "en": "The car", "type": "n", s_de: "Das Auto ist blau.", s_en: "The car is blue." },
+            { de: "Das Auto", en: "The car", type: "n", s_de: "Das Auto ist blau.", s_en: "The car is blue." },
             { de: "Leben", en: "To live", type: "v", s_de: "Ich lebe in Berlin.", s_en: "I live in Berlin." },
             { de: "Lernen", en: "To learn", type: "v", s_de: "Ich lerne Deutsch.", s_en: "I am learning German." },
             { de: "Kaufen", en: "To buy", type: "v", s_de: "Ich kaufe einen Apfel.", s_en: "I am buying an apple." },
@@ -220,7 +234,7 @@
                 adv: ['bg-purple-50', 'text-purple-600', 'adv', 'Adverb'] 
             };
             const c = colors[word.type];
-            card.className = "bg-white rounded-3xl shadow-xl p-6 mb-4 min-h-[380px] flex flex-col justify-between border border-slate-100 " + c[2];
+            card.className = "bg-white rounded-3xl shadow-xl p-6 mb-4 min-h-[380px] flex flex-col justify-between border border-slate-100 transition-all " + c[2];
             document.getElementById('type-tag').className = `text-[10px] font-bold px-3 py-1 rounded-full uppercase ${c[0]} ${c[1]}`;
             document.getElementById('type-tag').innerText = c[3];
 
@@ -238,11 +252,14 @@
             localStorage.setItem('g_learned', JSON.stringify(learnedList));
         }
 
+        // NAVIGATION
         function jumpToWord() {
             const val = parseInt(document.getElementById('jump-input').value);
             if (val > 0 && val <= dictionary.length) { currentIndex = val - 1; updateUI(); }
         }
-
+        function nextWord() { if (currentIndex < dictionary.length - 1) { currentIndex++; updateUI(); } }
+        function prevWord() { if (currentIndex > 0) { currentIndex--; updateUI(); } }
+        
         function toggleSentence() {
             const content = document.getElementById('sentence-content');
             const btn = document.getElementById('sent-btn');
@@ -250,9 +267,6 @@
             btn.innerHTML = content.classList.contains('hidden-sentence') ? "Example Sentence <span>↓</span>" : "Hide Sentence <span>↑</span>";
         }
 
-        function nextWord() { if (currentIndex < dictionary.length - 1) { currentIndex++; updateUI(); } }
-        function prevWord() { if (currentIndex > 0) { currentIndex--; updateUI(); } }
-        
         function toggleLearned() {
             const wordDe = dictionary[currentIndex].de;
             if(!learnedList.includes(wordDe)) { 
@@ -264,15 +278,50 @@
             updateUI();
         }
 
+        // DATA MANAGEMENT
+        function backupProgress() {
+            const data = {
+                index: currentIndex,
+                learned: learnedList,
+                timestamp: new Date().toISOString()
+            };
+            const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `deutsch3000_backup_${new Date().toLocaleDateString()}.json`;
+            a.click();
+        }
+
+        function restoreProgress(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.learned && Array.isArray(data.learned)) {
+                        learnedList = data.learned;
+                        currentIndex = data.index || 0;
+                        updateUI();
+                        alert("Success! Progress restored.");
+                    }
+                } catch (err) {
+                    alert("Invalid backup file.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
         function showLearnedList() {
             const container = document.getElementById('learned-container');
             container.innerHTML = "";
             if (learnedList.length === 0) {
-                container.innerHTML = "<p class='text-slate-400 text-center mt-10 uppercase text-xs font-bold'>No words learned yet!</p>";
+                container.innerHTML = "<p class='text-slate-400 text-center mt-10 uppercase text-[10px] font-black'>Start learning to see progress!</p>";
             } else {
                 learnedList.forEach(word => {
                     const div = document.createElement('div');
-                    div.className = "flex justify-between items-center p-4 bg-slate-50 rounded-2xl border border-slate-100";
+                    div.className = "flex justify-between items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 mb-2";
                     div.innerHTML = `<span class="font-bold text-slate-800">${word}</span> <span class="text-green-500 font-bold">✓</span>`;
                     container.appendChild(div);
                 });
@@ -287,14 +336,14 @@
         }
 
         function shuffleWords() {
-            if(confirm("Shuffle list? Progress is saved.")) {
+            if(confirm("Shuffle order? Progress remains safe.")) {
                 dictionary.sort(() => Math.random() - 0.5);
                 currentIndex = 0;
                 updateUI();
             }
         }
 
-        function resetData() { if(confirm("Reset all?")) { localStorage.clear(); location.reload(); } }
+        function resetData() { if(confirm("Reset all progress?")) { localStorage.clear(); location.reload(); } }
 
         updateUI();
     </script>
